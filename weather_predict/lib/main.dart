@@ -1,12 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import 'api_service.dart';
+import 'models/weather.dart';
 
 void main() {
   runApp(const WeatherPredictApp());
 }
-
-/// Status tampilan aplikasi
-enum WeatherStatus { initial, cerah, berawan, berpotensiHujan, hujan, error }
 
 /// Tema visual untuk tiap status
 class WeatherTheme {
@@ -85,6 +86,42 @@ const Map<WeatherStatus, WeatherTheme> weatherThemes = {
   ),
 };
 
+/// Indikator loading berupa spinner berputar dan teks "MEMPROSES".
+class _LoadingIndicator extends StatelessWidget {
+  final Color accent;
+
+  const _LoadingIndicator({required this.accent});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            strokeCap: StrokeCap.round,
+            color: accent,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          'MEMPROSES',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+            color: accent,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class WeatherPredictApp extends StatelessWidget {
   const WeatherPredictApp({super.key});
 
@@ -111,6 +148,12 @@ class WeatherHomePage extends StatefulWidget {
 
 class _WeatherHomePageState extends State<WeatherHomePage>
     with SingleTickerProviderStateMixin {
+  /// Durasi minimum tombol menampilkan animasi loading.
+  ///
+  /// Nilai 1 detik dipilih supaya spinner tidak berkedip sekejap saat
+  /// backend merespons sangat cepat.
+  static const Duration _minLoadingDuration = Duration(seconds: 1);
+
   final TextEditingController windController = TextEditingController();
   final TextEditingController humidityController = TextEditingController();
 
@@ -139,22 +182,7 @@ class _WeatherHomePageState extends State<WeatherHomePage>
     );
   }
 
-  WeatherStatus _statusFromCondition(String? c) {
-    switch (c) {
-      case 'Cerah':
-        return WeatherStatus.cerah;
-      case 'Berawan':
-        return WeatherStatus.berawan;
-      case 'Berpotensi Hujan':
-        return WeatherStatus.berpotensiHujan;
-      case 'Hujan':
-        return WeatherStatus.hujan;
-      default:
-        return WeatherStatus.berawan;
-    }
-  }
-
-  void _showError(String message) {
+void _showError(String message) {
     setState(() {
       status = WeatherStatus.error;
       errorMessage = message;
@@ -207,8 +235,11 @@ class _WeatherHomePageState extends State<WeatherHomePage>
       return;
     }
 
+    final stopwatch = Stopwatch()..start();
+
     setState(() {
       isLoading = true;
+      errorMessage = null;
     });
 
     try {
@@ -217,18 +248,57 @@ class _WeatherHomePageState extends State<WeatherHomePage>
         humidity: humidity,
       );
 
+      await _waitForMinimumLoading(stopwatch);
+      if (!mounted) return;
+
       setState(() {
-        condition = result['condition'];
-        description = result['description'];
-        status = _statusFromCondition(result['condition']);
-        lastWind = wind;
-        lastHumidity = humidity;
+        condition = result.condition;
+        description = result.description;
+        status = weatherStatusFromCondition(result.condition);
+        lastWind = result.windSpeed;
+        lastHumidity = result.humidity;
         errorMessage = null;
         isLoading = false;
       });
-    } catch (e) {
-      _showError('Tidak dapat terhubung ke server.');
+    } on TimeoutException {
+      await _waitForMinimumLoading(stopwatch);
+      if (!mounted) return;
+      setState(() {
+        status = WeatherStatus.error;
+        errorMessage = 'Server tidak merespons (timeout 10 detik).';
+        isLoading = false;
+      });
+    } on ApiException catch (e) {
+      await _waitForMinimumLoading(stopwatch);
+      if (!mounted) return;
+      setState(() {
+        status = WeatherStatus.error;
+        errorMessage = e.message;
+        isLoading = false;
+      });
+    } catch (_) {
+      await _waitForMinimumLoading(stopwatch);
+      if (!mounted) return;
+      setState(() {
+        status = WeatherStatus.error;
+        errorMessage = 'Tidak dapat terhubung ke server.';
+        isLoading = false;
+      });
     }
+  }
+
+  /// Menunggu sampai [_minLoadingDuration] tercapai.
+  ///
+  /// Backend lokal biasanya merespons dalam hitungan milidetik, sehingga
+  /// spinner akan berkedip sekejap dan terlihat seperti tidak terjadi
+  /// apa pun. Menahan minimal 1 detik membuat proses terasa deliberate
+  /// dan memberi kesempatan animasi selesai dengan rapi.
+  Future<void> _waitForMinimumLoading(Stopwatch stopwatch) async {
+    final remaining = _minLoadingDuration - stopwatch.elapsed;
+    if (remaining > Duration.zero) {
+      await Future<void>.delayed(remaining);
+    }
+    stopwatch.stop();
   }
 
   @override
@@ -514,14 +584,7 @@ class _WeatherHomePageState extends State<WeatherHomePage>
                             ),
                           ),
                           child: isLoading
-                              ? SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                    color: theme.accent,
-                                  ),
-                                )
+                              ? _LoadingIndicator(accent: theme.accent)
                               : const Text(
                                   'PREDIKSI CUACA',
                                   style: TextStyle(
