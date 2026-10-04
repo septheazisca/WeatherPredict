@@ -1,67 +1,43 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+
+from routers.predict import router as predict_router
+
+# Origins yang diizinkan.
+#
+# Flutter web memakai port acak setiap kali `flutter run -d chrome`
+# (contoh: http://localhost:62786), jadi daftar port statis tidak cukup.
+# Karena itu dipakai regex yang mengizinkan localhost dan 127.0.0.1
+# pada port mana pun.
+#
+# CORS hanya berlaku untuk Flutter web. Untuk Android/iOS/Windows,
+# permintaan dikirim lewat Dart HttpClient yang tidak menerapkan CORS.
+ALLOWED_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$"
 
 app = FastAPI(
     title="WeatherPredict API",
-    description="API untuk prediksi kondisi cuaca berdasarkan kecepatan angin dan kelembapan",
-    version="1.0.0"
+    description=(
+        "API untuk prediksi kondisi cuaca berdasarkan kecepatan angin dan "
+        "kelembapan. Metode: rule-based, tanpa machine learning."
+    ),
+    version="1.1.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
 )
 
-# Struktur data input
-class WeatherInput(BaseModel):
-    wind_speed: float = Field(..., ge=0, description="Kecepatan angin dalam km/jam")
-    humidity: float = Field(..., ge=0, le=100, description="Kelembapan dalam persen")
+app.include_router(predict_router)
 
 
-# GET untuk mengecek API
-@app.get("/health")
-def health():
+@app.get("/", include_in_schema=False)
+def root() -> dict[str, str]:
     return {
-        "status": "ok",
-        "message": "WeatherPredict API is running"
-    }
-
-
-# POST untuk prediksi cuaca
-@app.post("/api/v1/predict")
-def predict_weather(data: WeatherInput):
-
-    wind = data.wind_speed
-    humidity = data.humidity
-
-    # Aturan prediksi
-    if humidity < 60 and wind < 15:
-        condition = "Cerah"
-        description = "Kondisi cuaca cenderung cerah."
-
-    elif humidity < 75:
-        condition = "Berawan"
-        description = "Kondisi cuaca cenderung berawan."
-
-    elif humidity < 85 and wind >= 10:
-        condition = "Berpotensi Hujan"
-        description = "Kondisi cuaca berpotensi mengalami hujan."
-
-    elif humidity >= 85 and wind >= 15:
-        condition = "Hujan"
-        description = "Kondisi cuaca diprediksi hujan."
-
-    else:
-        condition = "Berpotensi Hujan"
-        description = "Kondisi cuaca berpotensi mengalami hujan."
-
-    return {
-        "wind_speed": wind,
-        "humidity": humidity,
-        "condition": condition,
-        "description": description
+        "service": "WeatherPredict API",
+        "version": app.version,
+        "docs": "/docs",
     }
