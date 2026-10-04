@@ -1,0 +1,141 @@
+# ============================================================
+#  WeatherPredict - .gitignore (root)
+# ============================================================
+# File ini berlaku untuk SELURUH folder di repo ini, termasuk
+# backend/ dan weather_predict/.
+#
+# weather_predict/.gitignore (bawaan Flutter) tetap berlaku untuk
+# isi folder Flutter, jadi tidak perlu diduplikasi di sini.
+# ============================================================
+
+
+# ----------------------------------------------------------
+#  Python / Backend
+# ----------------------------------------------------------
+
+# Virtual environment
+# Mengandung ribuan file library yang ukurannya besar dan
+# spesifik untuk satu komputer. Cukup commit requirements.txt.
+backend/venv/
+backend/env/
+venv/
+env/
+ENV/
+
+# Bytecode Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Cache pytest / linter
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Packaging
+*.egg-info/
+build/
+dist/
+*.egg
+
+
+# ----------------------------------------------------------
+#  Flutter / Dart
+# ----------------------------------------------------------
+# Seluruh aturan Flutter sudah ada di
+# weather_predict/.gitignore, antara lain:
+#   .dart_tool/, build/, pubspec.lock (untuk aplikasi), dll.
+# Yang perlu ditambah di sini hanya file yang keluar dari
+# folder Flutter.
+
+
+# ----------------------------------------------------------
+#  IDE / Editor
+# ----------------------------------------------------------
+
+# JetBrains (PyCharm, IntelliJ, Android Studio)
+# Isinya berisi konfigurasi lokal tiap orang, bukan kode.
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio Code
+.vscode/
+
+# Vim / Sublime
+*.swp
+*.swo
+*~
+.*.sw[a-z]
+
+
+# ----------------------------------------------------------
+#  Operating System
+# ----------------------------------------------------------
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+
+# ----------------------------------------------------------
+#  File sementara & log
+# ----------------------------------------------------------
+
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Dump crash
+*.dmp
+core
+
+
+# ----------------------------------------------------------
+#  Environment & kredensial
+# ----------------------------------------------------------
+# Jangan pernah commit API key atau password.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+
+
+# ----------------------------------------------------------
+#  Tooling milik editor AI / agent
+# ----------------------------------------------------------
+# Berisi salinan repo sebagai git worktree. Kalau ikut ter-commit,
+# repo jadi berlipat ganda dan Git menganggapnya sebagai repository
+# di dalam repository.
+.kilo/
+.claude/
+.cursor/
+
+
+# ----------------------------------------------------------
+#  File khusus mesin
+# ----------------------------------------------------------
+# Berisi path SDK Android dan Flutter milik komputer ini.
+# Setiap komputer punya nilai yang berbeda, jadi jangan di-commit.
+local.properties
+
+
+# ----------------------------------------------------------
+#  Screenshot
+# ----------------------------------------------------------
+# Dokumentasi sementara untuk laporan, bukan bagian dari kode.
+# Hapus baris ini kalau suatu saat gambar ini memang perlu ikut.
+/*.png
