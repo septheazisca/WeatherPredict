@@ -1,0 +1,4 @@
+fastapi
+uvicorn
+
+#jalankan: pip install -r requirements.txt
