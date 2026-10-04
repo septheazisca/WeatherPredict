@@ -1,0 +1,1 @@
+"""Router untuk endpoint prediksi dan health check."""
